@@ -124,18 +124,18 @@
 
         {% if result %}
             <div class="result-box">
-                <h2>📈 分析结果 (数据源: {{ result.source }})</h2>
+                <h2>📈 分析结果 (数据源: {{ result.data_source }})</h2>
                 <div class="result-item">
                     <p><b>股票代码：</b> {{ result.symbol }}{% if result.name %}（{{ result.name }}）{% endif %}</p>
                 </div>
                 <div class="result-item">
-                    <p><b>最新价格：</b> <span style="color: #667eea; font-weight: bold;">{{ result.last_price }}</span></p>
+                    <p><b>最新价格：</b> <span style="color: #667eea; font-weight: bold;">{{ result.current_price }}</span></p>
                 </div>
                 <div class="result-item">
-                    <p><b>支撑位：</b> <span style="color: #2e7d32; font-weight: bold;">{{ result.support }}</span>{% if result.support_pct is not none %}（相对最新价 <span style="color: #2e7d32;">{{ result.support_pct }}%</span>）{% endif %}</p>
+                    <p><b>支撑位：</b> <span style="color: #2e7d32; font-weight: bold;">{{ result.support_level }}</span>{% if result.support_pct is not none %}（相对最新价 <span style="color: #2e7d32;">{{ result.support_pct }}%</span>）{% endif %}</p>
                 </div>
                 <div class="result-item">
-                    <p><b>压力位：</b> <span style="color: #c62828; font-weight: bold;">{{ result.resistance }}</span>{% if result.resistance_pct is not none %}（相对最新价 <span style="color: #c62828;">{{ result.resistance_pct }}%</span>）{% endif %}</p>
+                    <p><b>压力位：</b> <span style="color: #c62828; font-weight: bold;">{{ result.resistance_level }}</span>{% if result.resistance_pct is not none %}（相对最新价 <span style="color: #c62828;">{{ result.resistance_pct }}%</span>）{% endif %}</p>
                 </div>
                 <div class="result-item">
                     <p><b>投资建议：</b> <span style="color: #f57c00; font-weight: bold;">{{ result.suggestion }}</span></p>
