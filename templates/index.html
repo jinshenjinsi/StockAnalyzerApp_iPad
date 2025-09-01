@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>股票分析系统 (双数据源版)</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .nav-bar {
+            background-color: #333;
+            color: white;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        .nav-bar a {
+            color: white;
+            text-decoration: none;
+            margin-right: 20px;
+            padding: 5px 10px;
+            border-radius: 3px;
+            transition: background-color 0.3s;
+        }
+        .nav-bar a:hover {
+            background-color: #555;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        form {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        input[type="text"] {
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            width: 300px;
+            margin-right: 10px;
+        }
+        input[type="text"]:focus {
+            border-color: #667eea;
+            outline: none;
+        }
+        button {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            transition: transform 0.2s;
+        }
+        .info-box {
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #f0f8ff;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        .result-box {
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            border: 1px solid #dee2e6;
+        }
+        .result-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            border-left: 3px solid #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-bar">
+            <a href="/">🏠 首页</a>
+            <a href="/ranking">📊 股票排名</a>
+            <a href="/screener">🔍 智能选股</a>
+        </div>
+        
+        <h1>🏠 股票分析系统</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 30px;">支持美股 + A股 + 港股的多市场分析</p>
+            <form method="post">
+            <label for="symbol" style="display: block; margin-bottom: 10px; font-weight: bold; color: #333;">输入股票代码：</label>
+            <input type="text" id="symbol" name="symbol" required placeholder="美股: AAPL, GOOGL | A股: 000001, 600000 | 港股: 00700, 09988">
+            <button type="submit">🔍 分析股票</button>
+        </form>
+        
+        <div class="info-box">
+            <h3>📊 支持的股票代码格式：</h3>
+            <ul>
+                <li><strong>美股：</strong> AAPL, GOOGL, TSLA, MSFT 等</li>
+                <li><strong>A股：</strong> 000001 (平安银行), 600000 (浦发银行), 300750 (宁德时代) 等</li>
+                <li><strong>A股规则：</strong> 6位数字，上海以6开头，深圳以0或3开头</li>
+                <li><strong>港股：</strong> 00700 (腾讯控股), 09988 (阿里巴巴), 03690 (美团) 等</li>
+                <li><strong>港股规则：</strong> 5位数字，以0-9开头</li>
+                <li><strong>数据源：</strong> A股和港股使用akshare专业数据，美股使用Alpha Vantage + yfinance</li>
+            </ul>
+        </div>
+
+        {% if result %}
+            <div class="result-box">
+                <h2>📈 分析结果 (数据源: {{ result.source }})</h2>
+                <div class="result-item">
+                    <p><b>股票代码：</b> {{ result.symbol }}{% if result.name %}（{{ result.name }}）{% endif %}</p>
+                </div>
+                <div class="result-item">
+                    <p><b>最新价格：</b> <span style="color: #667eea; font-weight: bold;">{{ result.last_price }}</span></p>
+                </div>
+                <div class="result-item">
+                    <p><b>支撑位：</b> <span style="color: #2e7d32; font-weight: bold;">{{ result.support }}</span>{% if result.support_pct is not none %}（相对最新价 <span style="color: #2e7d32;">{{ result.support_pct }}%</span>）{% endif %}</p>
+                </div>
+                <div class="result-item">
+                    <p><b>压力位：</b> <span style="color: #c62828; font-weight: bold;">{{ result.resistance }}</span>{% if result.resistance_pct is not none %}（相对最新价 <span style="color: #c62828;">{{ result.resistance_pct }}%</span>）{% endif %}</p>
+                </div>
+                <div class="result-item">
+                    <p><b>投资建议：</b> <span style="color: #f57c00; font-weight: bold;">{{ result.suggestion }}</span></p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>
