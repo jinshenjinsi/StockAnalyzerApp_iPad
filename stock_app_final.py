@@ -177,25 +177,46 @@ def get_market_rankings(market):
 
 # ====== AI选股算法 ======
 def calculate_ai_score(df, strategy):
-    """计算AI综合评分"""
+    """计算AI综合评分 - 投资价值导向版本"""
     try:
-        score = 0
-        
-        # 技术面评分 (40%)
+        # 计算基础评分
         technical_score = calculate_technical_score(df)
-        score += technical_score * 0.4
-        
-        # 动量评分 (30%)
         momentum_score = calculate_momentum_score(df)
-        score += momentum_score * 0.3
-        
-        # 风险评分 (20%)
         risk_score = calculate_risk_score(df)
-        score += risk_score * 0.2
-        
-        # 策略调整 (10%)
         strategy_score = calculate_strategy_adjustment(df, strategy)
-        score += strategy_score * 0.1
+        
+        # 根据策略调整权重分配，专注于投资价值
+        if strategy == "momentum":
+            # 成长动量策略：寻找高成长潜力的股票
+            # 权重：技术面25%，动量45%，风险15%，策略15%
+            score = (technical_score * 0.25 + 
+                    momentum_score * 0.45 + 
+                    risk_score * 0.15 + 
+                    strategy_score * 0.15)
+                    
+        elif strategy == "value":
+            # 价值投资策略：寻找被低估的优质股票
+            # 权重：技术面20%，动量15%，风险35%，策略30%
+            score = (technical_score * 0.20 + 
+                    momentum_score * 0.15 + 
+                    risk_score * 0.35 + 
+                    strategy_score * 0.30)
+                    
+        elif strategy == "volume":
+            # 资金关注策略：寻找资金大量流入的股票
+            # 权重：技术面35%，动量25%，风险10%，策略30%
+            score = (technical_score * 0.35 + 
+                    momentum_score * 0.25 + 
+                    risk_score * 0.10 + 
+                    strategy_score * 0.30)
+                    
+        else:  # 默认策略 - 均衡投资
+            # 均衡投资策略：平衡各因素，寻找稳健投资机会
+            # 权重：技术面30%，动量25%，风险25%，策略20%
+            score = (technical_score * 0.30 + 
+                    momentum_score * 0.25 + 
+                    risk_score * 0.25 + 
+                    strategy_score * 0.20)
         
         return min(max(score, 0), 100)  # 限制在0-100范围内
         
@@ -304,48 +325,179 @@ def calculate_risk_score(df):
         return 50
 
 def calculate_strategy_adjustment(df, strategy):
-    """根据策略调整评分"""
+    """根据策略调整评分 - 投资价值导向版本"""
     try:
         if strategy == "momentum":
-            # 动量策略：短期上涨股票得分更高
-            if len(df) >= 5:
-                recent_change = (df['Close'].iloc[-1] - df['Close'].iloc[-6]) / df['Close'].iloc[-6] * 100
-                if recent_change > 5:
-                    return 20
-                elif recent_change > 0:
-                    return 10
+            # 成长动量策略：寻找高成长潜力的股票
+            score = 0
+            if len(df) >= 10:
+                # 1. 短期成长性 (5日涨幅)
+                if len(df) >= 6:
+                    short_change = (df['Close'].iloc[-1] - df['Close'].iloc[-6]) / df['Close'].iloc[-6] * 100
                 else:
-                    return 0
-        
-        elif strategy == "value":
-            # 价值策略：低估值股票得分更高
-            if len(df) >= 20:
-                ma20 = df['Close'].rolling(20).mean().iloc[-1]
-                current_price = df['Close'].iloc[-1]
-                if current_price < ma20 * 0.9:
-                    return 20  # 低于20日均线10%
-                elif current_price < ma20:
-                    return 10  # 低于20日均线
+                    short_change = 0
+                
+                # 2. 中期成长性 (20日涨幅)
+                if len(df) >= 21:
+                    medium_change = (df['Close'].iloc[-1] - df['Close'].iloc[-21]) / df['Close'].iloc[-21] * 100
                 else:
-                    return 0
-        
-        elif strategy == "volume":
-            # 成交量策略：放量股票得分更高
-            if len(df) >= 5:
+                    medium_change = 0
+                
+                # 3. 成长性评分
+                if short_change > 10 and medium_change > 15:
+                    score += 40  # 双高成长
+                elif short_change > 5 and medium_change > 10:
+                    score += 30  # 高成长
+                elif short_change > 0 and medium_change > 5:
+                    score += 20  # 温和成长
+                elif short_change > 0 or medium_change > 0:
+                    score += 10  # 微成长
+                else:
+                    score += 0   # 无成长
+                
+                # 4. 成交量确认
                 recent_volume = df['Volume'].tail(5).mean()
                 avg_volume = df['Volume'].mean()
-                if recent_volume > avg_volume * 1.5:
-                    return 20  # 放量
+                if recent_volume > avg_volume * 2:
+                    score += 20  # 放量确认
+                elif recent_volume > avg_volume * 1.5:
+                    score += 15  # 温和放量
                 elif recent_volume > avg_volume:
-                    return 10  # 温和放量
-                else:
-                    return 0
+                    score += 10  # 略放量
+                    
+            return min(score, 60)  # 最高60分
         
-        return 10  # 默认调整分数
+        elif strategy == "value":
+            # 价值投资策略：寻找被低估的优质股票
+            score = 0
+            if len(df) >= 20:
+                current_price = df['Close'].iloc[-1]
+                
+                # 1. 价格相对均线位置（估值水平）
+                ma20 = df['Close'].rolling(20).mean().iloc[-1]
+                ma50 = df['Close'].rolling(50).mean().iloc[-1] if len(df) >= 50 else ma20
+                
+                # 2. 价值评分（价格越低，价值越高）
+                if current_price < ma20 * 0.8:
+                    score += 35  # 严重低估
+                elif current_price < ma20 * 0.9:
+                    score += 25  # 明显低估
+                elif current_price < ma20 * 0.95:
+                    score += 15  # 轻微低估
+                elif current_price < ma20:
+                    score += 10  # 略低估
+                else:
+                    score += 0   # 高估
+                
+                # 3. 长期支撑确认
+                if current_price < ma50 * 0.85:
+                    score += 25  # 长期严重低估
+                elif current_price < ma50 * 0.95:
+                    score += 15  # 长期低估
+                elif current_price < ma50:
+                    score += 10  # 长期略低估
+                
+                # 4. 风险控制（波动率）
+                if len(df) >= 20:
+                    returns = df['Close'].pct_change().dropna()
+                    volatility = returns.std() * 100
+                    if volatility < 15:
+                        score += 20  # 低风险
+                    elif volatility < 25:
+                        score += 15  # 中等风险
+                    elif volatility < 35:
+                        score += 10  # 较高风险
+                    else:
+                        score += 0   # 高风险
+                    
+            return min(score, 60)  # 最高60分
+        
+        elif strategy == "volume":
+            # 资金关注策略：寻找资金大量流入的股票
+            score = 0
+            if len(df) >= 10:
+                # 1. 成交量分析
+                recent_volume = df['Volume'].tail(5).mean()
+                avg_volume = df['Volume'].mean()
+                volume_ratio = recent_volume / avg_volume if avg_volume > 0 else 1
+                
+                # 2. 资金流入评分
+                if volume_ratio > 4:
+                    score += 40  # 巨量资金流入
+                elif volume_ratio > 3:
+                    score += 35  # 大量资金流入
+                elif volume_ratio > 2:
+                    score += 25  # 明显资金流入
+                elif volume_ratio > 1.5:
+                    score += 15  # 温和资金流入
+                elif volume_ratio > 1:
+                    score += 10  # 略资金流入
+                else:
+                    score += 0   # 资金流出
+                
+                # 3. 价格突破确认
+                if len(df) >= 10:
+                    recent_high = df['High'].tail(5).max()
+                    prev_high = df['High'].iloc[-10:-5].max()
+                    if recent_high > prev_high * 1.05:
+                        score += 20  # 强势突破
+                    elif recent_high > prev_high * 1.02:
+                        score += 15  # 明显突破
+                    elif recent_high > prev_high:
+                        score += 10  # 轻微突破
+                
+                # 4. 技术面确认
+                if len(df) >= 5:
+                    # 连续上涨确认
+                    recent_closes = df['Close'].tail(5)
+                    if all(recent_closes.iloc[i] >= recent_closes.iloc[i-1] for i in range(1, len(recent_closes))):
+                        score += 20  # 连续上涨
+                    elif recent_closes.iloc[-1] > recent_closes.iloc[0]:
+                        score += 10  # 整体上涨
+                        
+            return min(score, 60)  # 最高60分
+        
+        else:  # 默认策略 - 均衡投资
+            # 均衡投资策略：平衡各因素，寻找稳健投资机会
+            score = 0
+            if len(df) >= 20:
+                current_price = df['Close'].iloc[-1]
+                ma20 = df['Close'].rolling(20).mean().iloc[-1]
+                
+                # 1. 价格合理性
+                if 0.95 <= current_price / ma20 <= 1.05:
+                    score += 20  # 价格合理
+                elif 0.9 <= current_price / ma20 <= 1.1:
+                    score += 15  # 价格较合理
+                else:
+                    score += 10  # 价格偏离
+                
+                # 2. 稳定性
+                if len(df) >= 20:
+                    returns = df['Close'].pct_change().dropna()
+                    volatility = returns.std() * 100
+                    if volatility < 20:
+                        score += 20  # 高稳定性
+                    elif volatility < 30:
+                        score += 15  # 中等稳定性
+                    else:
+                        score += 10  # 低稳定性
+                
+                # 3. 趋势性
+                if len(df) >= 10:
+                    recent_trend = (df['Close'].iloc[-1] - df['Close'].iloc[-10]) / df['Close'].iloc[-10] * 100
+                    if 5 <= recent_trend <= 15:
+                        score += 20  # 稳健上涨
+                    elif 0 <= recent_trend <= 20:
+                        score += 15  # 温和上涨
+                    else:
+                        score += 10  # 趋势不明
+                        
+            return min(score, 60)  # 最高60分
         
     except Exception as e:
         print(f"策略调整计算失败: {e}")
-        return 10
+        return 30
 
 # ====== 增强选股功能 ======
 def screen_stocks_enhanced(market, strategy, limit=20):
