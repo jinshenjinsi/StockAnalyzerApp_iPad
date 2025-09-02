@@ -1086,6 +1086,15 @@ def index():
                 print(f"🔄 开始分析股票: {symbol}")
                 result = analyze_stock_enhanced(symbol)
                 print(f"✅ 分析完成: {result}")
+                
+                # 确保数据类型正确，转换为Python原生类型
+                if result and isinstance(result, dict):
+                    for key, value in result.items():
+                        if hasattr(value, 'item'):  # numpy类型
+                            result[key] = value.item()
+                        elif isinstance(value, (list, tuple)):
+                            result[key] = [str(v) if hasattr(v, 'item') else v for v in value]
+                
             except Exception as e:
                 print(f"❌ 分析失败: {e}")
                 result = {"error": str(e)}
