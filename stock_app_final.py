@@ -175,6 +175,178 @@ def get_market_rankings(market):
         print(f"获取{market}市场排名失败: {e}")
         return []
 
+# ====== AI选股算法 ======
+def calculate_ai_score(df, strategy):
+    """计算AI综合评分"""
+    try:
+        score = 0
+        
+        # 技术面评分 (40%)
+        technical_score = calculate_technical_score(df)
+        score += technical_score * 0.4
+        
+        # 动量评分 (30%)
+        momentum_score = calculate_momentum_score(df)
+        score += momentum_score * 0.3
+        
+        # 风险评分 (20%)
+        risk_score = calculate_risk_score(df)
+        score += risk_score * 0.2
+        
+        # 策略调整 (10%)
+        strategy_score = calculate_strategy_adjustment(df, strategy)
+        score += strategy_score * 0.1
+        
+        return min(max(score, 0), 100)  # 限制在0-100范围内
+        
+    except Exception as e:
+        print(f"AI评分计算失败: {e}")
+        return 50
+
+def calculate_technical_score(df):
+    """计算技术面评分"""
+    try:
+        score = 0
+        
+        # RSI评分
+        rsi = calculate_rsi(df)
+        if rsi is not None:
+            if 30 <= rsi <= 70:
+                score += 25  # 正常区间
+            elif rsi < 30:
+                score += 35  # 超卖，买入机会
+            elif rsi > 70:
+                score += 15  # 超买，注意风险
+        
+        # MACD评分
+        macd_data = calculate_macd(df)
+        if macd_data['macd'] > macd_data['signal']:
+            score += 25  # 看涨信号
+        elif macd_data['macd'] < macd_data['signal']:
+            score += 15  # 看跌信号
+        else:
+            score += 20  # 中性
+        
+        # 布林带评分
+        bb_upper, bb_lower = calculate_bollinger_bands(df)
+        if bb_upper is not None and bb_lower is not None:
+            current_price = df["Close"].iloc[-1]
+            if current_price <= bb_lower * 1.02:
+                score += 25  # 接近下轨，超卖
+            elif current_price >= bb_upper * 0.98:
+                score += 15  # 接近上轨，超买
+            else:
+                score += 20  # 正常区间
+        
+        # 成交量评分
+        volume_score = calculate_volume_score(df)
+        score += volume_score
+        
+        return min(score, 100)
+        
+    except Exception as e:
+        print(f"技术面评分计算失败: {e}")
+        return 50
+
+def calculate_momentum_score(df):
+    """计算动量评分"""
+    try:
+        if len(df) < 20:
+            return 50
+        
+        # 短期动量 (5日)
+        short_momentum = (df['Close'].iloc[-1] - df['Close'].iloc[-6]) / df['Close'].iloc[-6] * 100
+        
+        # 中期动量 (20日)
+        medium_momentum = (df['Close'].iloc[-1] - df['Close'].iloc[-21]) / df['Close'].iloc[-21] * 100
+        
+        # 动量一致性
+        if short_momentum > 0 and medium_momentum > 0:
+            score = 80  # 双上涨
+        elif short_momentum > 0 and medium_momentum < 0:
+            score = 60  # 短期反弹
+        elif short_momentum < 0 and medium_momentum > 0:
+            score = 40  # 短期回调
+        else:
+            score = 20  # 双下跌
+        
+        return score
+        
+    except Exception as e:
+        print(f"动量评分计算失败: {e}")
+        return 50
+
+def calculate_risk_score(df):
+    """计算风险评分"""
+    try:
+        if len(df) < 20:
+            return 50
+        
+        # 波动率计算
+        returns = df['Close'].pct_change().dropna()
+        volatility = returns.std() * 100
+        
+        # 最大回撤
+        cumulative = (1 + returns).cumprod()
+        running_max = cumulative.expanding().max()
+        drawdown = (cumulative - running_max) / running_max * 100
+        max_drawdown = abs(drawdown.min())
+        
+        # 风险评分 (波动率越低，回撤越小，评分越高)
+        volatility_score = max(0, 100 - volatility * 2)
+        drawdown_score = max(0, 100 - max_drawdown)
+        
+        risk_score = (volatility_score + drawdown_score) / 2
+        return risk_score
+        
+    except Exception as e:
+        print(f"风险评分计算失败: {e}")
+        return 50
+
+def calculate_strategy_adjustment(df, strategy):
+    """根据策略调整评分"""
+    try:
+        if strategy == "momentum":
+            # 动量策略：短期上涨股票得分更高
+            if len(df) >= 5:
+                recent_change = (df['Close'].iloc[-1] - df['Close'].iloc[-6]) / df['Close'].iloc[-6] * 100
+                if recent_change > 5:
+                    return 20
+                elif recent_change > 0:
+                    return 10
+                else:
+                    return 0
+        
+        elif strategy == "value":
+            # 价值策略：低估值股票得分更高
+            if len(df) >= 20:
+                ma20 = df['Close'].rolling(20).mean().iloc[-1]
+                current_price = df['Close'].iloc[-1]
+                if current_price < ma20 * 0.9:
+                    return 20  # 低于20日均线10%
+                elif current_price < ma20:
+                    return 10  # 低于20日均线
+                else:
+                    return 0
+        
+        elif strategy == "volume":
+            # 成交量策略：放量股票得分更高
+            if len(df) >= 5:
+                recent_volume = df['Volume'].tail(5).mean()
+                avg_volume = df['Volume'].mean()
+                if recent_volume > avg_volume * 1.5:
+                    return 20  # 放量
+                elif recent_volume > avg_volume:
+                    return 10  # 温和放量
+                else:
+                    return 0
+        
+        return 10  # 默认调整分数
+        
+    except Exception as e:
+        print(f"策略调整计算失败: {e}")
+        return 10
+
 # ====== 增强选股功能 ======
 def screen_stocks_enhanced(market, strategy, limit=20):
     """增强版选股功能 - 混合模式：优先真实数据，失败时离线模式"""
@@ -189,25 +361,50 @@ def screen_stocks_enhanced(market, strategy, limit=20):
                 use_real_data = True
                 print("✅ A股使用数据（缓存或实时）")
                 
-                # 应用选股策略
-                if strategy == "momentum":
-                    df = df.sort_values('涨跌幅', ascending=False)
-                elif strategy == "volume":
-                    df = df.sort_values('成交量', ascending=False)
-                elif strategy == "value":
-                    if '市盈率' in df.columns:
-                        df = df[df['市盈率'] > 0].sort_values('市盈率')
-                    else:
-                        df = df.sort_values('最新价')
-                else:
-                    df = df.sort_values('涨跌幅', ascending=False)
+                # 应用AI选股策略
+                print("🤖 使用AI算法进行智能选股...")
                 
-                df = df.head(limit)
-                
-                results = []
+                # 为每只股票计算AI评分
+                stock_scores = []
                 for _, row in df.iterrows():
                     try:
+                        # 获取历史数据进行AI分析
+                        hist_data = fetch_ashare_data(row['代码'])
+                        if not hist_data.empty:
+                            ai_score = calculate_ai_score(hist_data, strategy)
+                            stock_scores.append({
+                                'row': row,
+                                'ai_score': ai_score
+                            })
+                        else:
+                            # 如果无法获取历史数据，使用基础评分
+                            stock_scores.append({
+                                'row': row,
+                                'ai_score': 50
+                            })
+                    except Exception as e:
+                        print(f"AI评分计算失败 {row['代码']}: {e}")
+                        stock_scores.append({
+                            'row': row,
+                            'ai_score': 50
+                        })
+                
+                # 按AI评分排序
+                stock_scores.sort(key=lambda x: x['ai_score'], reverse=True)
+                top_stocks = stock_scores[:limit]
+                
+                print(f"✅ AI选股完成，筛选出 {len(top_stocks)} 只优质股票")
+                
+                results = []
+                for stock_data in top_stocks:
+                    row = stock_data['row']
+                    ai_score = stock_data['ai_score']
+                    
+                    try:
                         analysis = analyze_stock_enhanced(row['代码'])
+                        # 更新AI评分
+                        analysis['ai_score'] = ai_score
+                        analysis['overall_score'] = max(analysis['overall_score'], ai_score)
                         results.append(analysis)
                     except Exception as e:
                         print(f"A股详细分析失败 {row['代码']}: {e}")
@@ -219,15 +416,16 @@ def screen_stocks_enhanced(market, strategy, limit=20):
                             "change": row['涨跌幅'],
                             "volume": row['成交量'],
                             "currency": "¥",
-                            "data_source": "历史数据构建",
+                            "data_source": "AI智能选股",
                             "strategy": strategy,
                             "support_level": round(row['最新价'] * 0.9, 2),
                             "resistance_level": round(row['最新价'] * 1.1, 2),
-                            "overall_score": 50,
-                            "technical_score": 50,
-                            "fundamental_score": 50,
-                            "institutional_action": "观望",
-                            "signals": ["历史数据", "基础分析"]
+                            "overall_score": ai_score,
+                            "ai_score": ai_score,
+                            "technical_score": ai_score * 0.6,
+                            "fundamental_score": ai_score * 0.4,
+                            "institutional_action": "AI推荐",
+                            "signals": ["AI智能选股", f"综合评分: {ai_score}"]
                         })
                 
                 return results
@@ -247,25 +445,50 @@ def screen_stocks_enhanced(market, strategy, limit=20):
                 use_real_data = True
                 print("✅ 港股使用数据（缓存或实时）")
                 
-                # 应用选股策略
-                if strategy == "momentum":
-                    df = df.sort_values('涨跌幅', ascending=False)
-                elif strategy == "volume":
-                    df = df.sort_values('成交量', ascending=False)
-                elif strategy == "value":
-                    if '市盈率' in df.columns:
-                        df = df[df['市盈率'] > 0].sort_values('市盈率')
-                    else:
-                        df = df.sort_values('最新价')
-                else:
-                    df = df.sort_values('涨跌幅', ascending=False)
+                # 应用AI选股策略
+                print("🤖 使用AI算法进行智能选股...")
                 
-                df = df.head(limit)
-                
-                results = []
+                # 为每只股票计算AI评分
+                stock_scores = []
                 for _, row in df.iterrows():
                     try:
+                        # 获取历史数据进行AI分析
+                        hist_data = fetch_hkshare_data(row['代码'])
+                        if not hist_data.empty:
+                            ai_score = calculate_ai_score(hist_data, strategy)
+                            stock_scores.append({
+                                'row': row,
+                                'ai_score': ai_score
+                            })
+                        else:
+                            # 如果无法获取历史数据，使用基础评分
+                            stock_scores.append({
+                                'row': row,
+                                'ai_score': 50
+                            })
+                    except Exception as e:
+                        print(f"AI评分计算失败 {row['代码']}: {e}")
+                        stock_scores.append({
+                            'row': row,
+                            'ai_score': 50
+                        })
+                
+                # 按AI评分排序
+                stock_scores.sort(key=lambda x: x['ai_score'], reverse=True)
+                top_stocks = stock_scores[:limit]
+                
+                print(f"✅ AI选股完成，筛选出 {len(top_stocks)} 只优质股票")
+                
+                results = []
+                for stock_data in top_stocks:
+                    row = stock_data['row']
+                    ai_score = stock_data['ai_score']
+                    
+                    try:
                         analysis = analyze_stock_enhanced(row['代码'])
+                        # 更新AI评分
+                        analysis['ai_score'] = ai_score
+                        analysis['overall_score'] = max(analysis['overall_score'], ai_score)
                         results.append(analysis)
                     except Exception as e:
                         print(f"港股详细分析失败 {row['代码']}: {e}")
@@ -276,15 +499,16 @@ def screen_stocks_enhanced(market, strategy, limit=20):
                             "change": row['涨跌幅'],
                             "volume": row['成交量'],
                             "currency": "HK$",
-                            "data_source": "历史数据构建",
+                            "data_source": "AI智能选股",
                             "strategy": strategy,
                             "support_level": round(row['最新价'] * 0.9, 2),
                             "resistance_level": round(row['最新价'] * 1.1, 2),
-                            "overall_score": 50,
-                            "technical_score": 50,
-                            "fundamental_score": 50,
-                            "institutional_action": "观望",
-                            "signals": ["历史数据", "基础分析"]
+                            "overall_score": ai_score,
+                            "ai_score": ai_score,
+                            "technical_score": ai_score * 0.6,
+                            "fundamental_score": ai_score * 0.4,
+                            "institutional_action": "AI推荐",
+                            "signals": ["AI智能选股", f"综合评分: {ai_score}"]
                         })
                 
                 return results
