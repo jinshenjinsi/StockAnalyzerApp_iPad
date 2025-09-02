@@ -449,16 +449,29 @@ def analyze_stock_enhanced(symbol):
         else:
             # 美股或其他
             try:
-                df = fetch_alpha_vantage(symbol)
+                # 优先使用yfinance获取美股数据
+                df = fetch_yfinance(symbol)
                 market_type = "美股"
                 currency = "$"
-                data_source = "历史数据"
-            except:
-                # 使用模拟数据
-                df = generate_simulated_data(symbol)
-                market_type = "美股(模拟)"
-                currency = "$"
-                data_source = "模拟数据"
+                data_source = "yfinance实时数据"
+                print("✅ 使用yfinance获取美股数据成功")
+            except Exception as e1:
+                print(f"yfinance获取失败: {e1}")
+                try:
+                    # 备用方案：使用Alpha Vantage
+                    df = fetch_alpha_vantage(symbol)
+                    market_type = "美股"
+                    currency = "$"
+                    data_source = "Alpha Vantage历史数据"
+                    print("✅ 使用Alpha Vantage获取美股数据成功")
+                except Exception as e2:
+                    print(f"Alpha Vantage获取失败: {e2}")
+                    # 最后使用模拟数据
+                    df = generate_simulated_data(symbol)
+                    market_type = "美股(模拟)"
+                    currency = "$"
+                    data_source = "模拟数据"
+                    print("⚠️ 使用模拟数据作为备用方案")
         
         # 计算技术指标
         technical_score = calculate_enhanced_technical_score(df)
@@ -872,6 +885,35 @@ def fetch_hkshare_data(symbol):
         
     except Exception as e:
         raise Exception(f"akshare港股数据获取失败: {str(e)}")
+
+# ====== 美股数据获取 ======
+def fetch_yfinance(symbol):
+    """使用yfinance获取美股数据"""
+    try:
+        print(f"🔄 从yfinance获取 {symbol} 数据...")
+        ticker = yf.Ticker(symbol)
+        
+        # 获取最近100天的历史数据
+        df = ticker.history(period="100d")
+        
+        if df.empty:
+            raise Exception("yfinance返回空数据")
+        
+        # 确保列名一致
+        df = df.rename(columns={
+            'Open': 'Open',
+            'High': 'High', 
+            'Low': 'Low',
+            'Close': 'Close',
+            'Volume': 'Volume'
+        })
+        
+        print(f"✅ yfinance数据获取成功: {len(df)} 条记录")
+        return df
+        
+    except Exception as e:
+        print(f"❌ yfinance数据获取失败: {e}")
+        raise e
 
 def fetch_alpha_vantage(symbol):
     """获取Alpha Vantage数据"""
