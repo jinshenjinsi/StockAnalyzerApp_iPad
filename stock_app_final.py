@@ -550,22 +550,8 @@ def screen_stocks_enhanced(market, strategy, limit=20):
                             results.append(analysis)
                         except Exception as e:
                             print(f"美股详细分析失败 {symbol}: {e}")
-                            # 模拟数据
-                            results.append({
-                                "symbol": symbol,
-                                "name": f"{symbol} Corp",
-                                "last_price": round(random.uniform(50, 500), 2),
-                                "change": round(random.uniform(-10, 15), 2),
-                                "volume": f"{random.randint(1000, 10000)}K",
-                                "currency": "$",
-                                "source": "混合数据 (部分实时)",
-                                "strategy": strategy,
-                                "note": "部分实时数据，部分模拟数据",
-                                "support": round(random.uniform(40, 400), 2),
-                                "resistance": round(random.uniform(60, 600), 2),
-                                "overall_score": random.randint(40, 80),
-                                "signals": "混合数据"
-                            })
+                            # 跳过失败的股票，继续分析其他股票
+                            continue
                     
                     return results
                 else:
@@ -610,12 +596,14 @@ def analyze_stock_enhanced(symbol):
                             
                             # 创建简化的历史数据用于技术分析
                             dates = pd.date_range(end=pd.Timestamp.now(), periods=5, freq='D')
+                            # 基于真实价格创建合理的历史数据
+                            price_variation = current_price * 0.01  # 1%的价格波动
                             df = pd.DataFrame({
-                                'Open': [current_price * (1 + random.uniform(-0.02, 0.02)) for _ in dates],
-                                'High': [current_price * (1 + random.uniform(0, 0.03)) for _ in dates],
-                                'Low': [current_price * (1 + random.uniform(-0.03, 0)) for _ in dates],
-                                'Close': [current_price * (1 + random.uniform(-0.01, 0.01)) for _ in dates],
-                                'Volume': [volume * random.uniform(0.8, 1.2) for _ in dates]
+                                'Open': [current_price - price_variation * 0.5] * 5,
+                                'High': [current_price + price_variation] * 5,
+                                'Low': [current_price - price_variation] * 5,
+                                'Close': [current_price] * 5,
+                                'Volume': [volume] * 5
                             }, index=dates)
                             
                             market_type = "A股"
@@ -651,12 +639,14 @@ def analyze_stock_enhanced(symbol):
                             volume = row['成交量']
                             
                             dates = pd.date_range(end=pd.Timestamp.now(), periods=5, freq='D')
+                            # 基于真实价格创建合理的历史数据
+                            price_variation = current_price * 0.01  # 1%的价格波动
                             df = pd.DataFrame({
-                                'Open': [current_price * (1 + random.uniform(-0.02, 0.02)) for _ in dates],
-                                'High': [current_price * (1 + random.uniform(0, 0.03)) for _ in dates],
-                                'Low': [current_price * (1 + random.uniform(-0.03, 0)) for _ in dates],
-                                'Close': [current_price * (1 + random.uniform(-0.01, 0.01)) for _ in dates],
-                                'Volume': [volume * random.uniform(0.8, 1.2) for _ in dates]
+                                'Open': [current_price - price_variation * 0.5] * 5,
+                                'High': [current_price + price_variation] * 5,
+                                'Low': [current_price - price_variation] * 5,
+                                'Close': [current_price] * 5,
+                                'Volume': [volume] * 5
                             }, index=dates)
                             
                             market_type = "港股"
@@ -690,12 +680,8 @@ def analyze_stock_enhanced(symbol):
                     print("✅ 使用Alpha Vantage获取美股数据成功")
                 except Exception as e2:
                     print(f"Alpha Vantage获取失败: {e2}")
-                    # 最后使用模拟数据
-                    df = generate_simulated_data(symbol)
-                    market_type = "美股(模拟)"
-                    currency = "$"
-                    data_source = "模拟数据"
-                    print("⚠️ 使用模拟数据作为备用方案")
+                    # 如果两个数据源都失败，抛出异常
+                    raise Exception(f"无法获取 {symbol} 的美股数据，请检查股票代码是否正确")
         
         # 计算技术指标
         technical_score = calculate_enhanced_technical_score(df)
@@ -973,29 +959,7 @@ def calculate_price_change(df):
     except:
         return 0
 
-def generate_simulated_data(symbol):
-    """生成模拟数据（用于美股）"""
-    dates = pd.date_range(end=pd.Timestamp.now(), periods=30, freq='D')
-    np.random.seed(hash(symbol) % 1000)  # 基于股票代码的固定随机数
-    
-    base_price = random.uniform(50, 500)
-    prices = []
-    for i in range(30):
-        if i == 0:
-            prices.append(base_price)
-        else:
-            change = random.uniform(-0.05, 0.05)
-            prices.append(prices[-1] * (1 + change))
-    
-    df = pd.DataFrame({
-        'Open': [p * random.uniform(0.98, 1.02) for p in prices],
-        'High': [p * random.uniform(1.0, 1.05) for p in prices],
-        'Low': [p * random.uniform(0.95, 1.0) for p in prices],
-        'Close': prices,
-        'Volume': [random.randint(1000000, 10000000) for _ in prices]
-    }, index=dates)
-    
-    return df
+
 
 def is_ashare_symbol(symbol):
     """判断是否为A股代码"""
