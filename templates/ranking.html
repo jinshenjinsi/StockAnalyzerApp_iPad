@@ -2,6 +2,11 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="manifest" href="/static/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
     <title>{% if market=='CN' %}A股{% elif market=='HK' %}港股{% else %}美股{% endif %}排名</title>
     <style>
         table { border-collapse: collapse; width: 100%; }
@@ -10,6 +15,13 @@
     </style>
 </head>
 <body>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js').catch(()=>{});
+            });
+        }
+    </script>
     <h2>{% if market=='CN' %}A股{% elif market=='HK' %}港股{% else %}美股{% endif %}排名</h2>
     <div style="margin-bottom:10px;">
         <a href="/">返回首页</a>
