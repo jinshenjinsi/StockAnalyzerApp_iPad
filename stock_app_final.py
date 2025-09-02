@@ -1566,4 +1566,5 @@ def api_screen_stocks():
         })
 
 if __name__ == "__main__":
-    app.run(host='127.0.0.1', port=8082, debug=False, use_reloader=False)
+    # 监听到 0.0.0.0 以便同一局域网设备（如 iPad）访问
+    app.run(host='0.0.0.0', port=8082, debug=False, use_reloader=False)
