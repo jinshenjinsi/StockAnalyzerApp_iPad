@@ -43,4 +43,5 @@ echo ""
 echo "按 Ctrl+C 停止应用"
 echo ""
 
-python3 stock_app_final.py
+# 固定使用 8082 端口运行，避免 8083 端口占用导致无法启动
+PORT=8082 python3 stock_app_final.py

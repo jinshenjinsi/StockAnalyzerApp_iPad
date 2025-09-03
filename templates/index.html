@@ -77,11 +77,12 @@
             transition: transform 0.2s;
         }
         .info-box {
-            margin: 20px 0;
-            padding: 20px;
-            background-color: #f0f8ff;
-            border-radius: 10px;
-            border-left: 4px solid #667eea;
+            margin: 12px 0;
+            padding: 12px;
+            background-color: #f5f9ff;
+            border-radius: 8px;
+            border-left: 3px solid #667eea;
+            font-size: 14px;
         }
         .result-box {
             margin: 20px 0;
@@ -97,6 +98,20 @@
             border-radius: 5px;
             border-left: 3px solid #667eea;
         }
+        .summary-bar { display:flex; gap:16px; justify-content:space-between; align-items:center; padding:12px 16px; border-radius:8px; background:#fff; border:1px solid #eee; }
+        .summary-chip { display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:90px; }
+        .score { font-size:28px; font-weight:800; color:#222; }
+        .subtitle { color:#666; font-size:12px; margin-top:4px; }
+        .suggestion { font-size:16px; font-weight:700; color:#f57c00; }
+        .badge { display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; margin:4px 6px 0 0; }
+        .badge-green { background:#e8f5e9; color:#2e7d32; }
+        .badge-red { background:#ffebee; color:#c62828; }
+        .badge-blue { background:#e3f2fd; color:#1976d2; }
+        .kv { display:flex; gap:12px; flex-wrap:wrap; }
+        .kv .item { background:#fff; border:1px solid #eee; border-left:4px solid #667eea; border-radius:6px; padding:8px 12px; }
+        .section-title { font-weight:800; margin:6px 0 10px; }
+        .grid-2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px; }
+        .chart-card { background:#fff; border:1px solid #eee; border-radius:8px; padding:12px; }
     </style>
 </head>
 <body>
@@ -123,37 +138,162 @@
         </form>
         
         <div class="info-box">
-            <h3>📊 支持的股票代码格式：</h3>
-            <ul>
-                <li><strong>美股：</strong> AAPL, GOOGL, TSLA, MSFT 等</li>
-                <li><strong>A股：</strong> 000001 (平安银行), 600000 (浦发银行), 300750 (宁德时代) 等</li>
-                <li><strong>A股规则：</strong> 6位数字，上海以6开头，深圳以0或3开头</li>
-                <li><strong>港股：</strong> 00700 (腾讯控股), 09988 (阿里巴巴), 03690 (美团) 等</li>
-                <li><strong>港股规则：</strong> 5位数字，以0-9开头</li>
-                <li><strong>数据源：</strong> A股和港股使用akshare专业数据，美股使用Alpha Vantage + yfinance</li>
-            </ul>
+            <details>
+                <summary style="cursor:pointer;font-weight:700;">📊 支持的股票代码格式（点击展开）</summary>
+                <ul style="margin-top:8px;">
+                    <li><strong>美股：</strong> AAPL, GOOGL, TSLA, MSFT 等</li>
+                    <li><strong>A股：</strong> 000001 (平安银行), 600000 (浦发银行), 300750 (宁德时代) 等</li>
+                    <li><strong>A股规则：</strong> 6位数字，上海以6开头，深圳以0或3开头</li>
+                    <li><strong>港股：</strong> 00700 (腾讯控股), 09988 (阿里巴巴), 03690 (美团) 等</li>
+                    <li><strong>港股规则：</strong> 5位数字，以0-9开头</li>
+                    <li><strong>数据源：</strong> A股/港股 akshare，美股 Alpha Vantage + yfinance</li>
+                </ul>
+            </details>
         </div>
 
         {% if result %}
             <div class="result-box">
-                <h2>📈 分析结果 (数据源: {{ result.data_source }})</h2>
-                <div class="result-item">
-                    <p><b>股票代码：</b> {{ result.symbol }}{% if result.name %}（{{ result.name }}）{% endif %}</p>
+                {% if result.error %}
+                <div class="info-box" style="background:#fff3e0;border-left-color:#fb8c00;">
+                    <b>提示：</b> {{ result.error }}。已尝试备用数据源，请稍后重试或更换网络。
                 </div>
-                <div class="result-item">
-                    <p><b>最新价格：</b> <span style="color: #667eea; font-weight: bold;">{{ result.current_price }}</span></p>
+                {% endif %}
+                <div class="summary-bar">
+                    <div>
+                        <div style="font-size:18px;font-weight:800;color:#333;">{{ result.name or result.symbol }}（{{ result.symbol }}）</div>
+                        <div class="subtitle">数据源：{{ result.data_source }} | 市场：{{ result.market_type }}</div>
+                    </div>
+                    <div class="summary-chip">
+                        <div class="score">{{ result.overall_score }}</div>
+                        <div class="subtitle">综合得分</div>
+                    </div>
+                    <div class="summary-chip">
+                        <div style="font-size:20px;color:#667eea;font-weight:800;">{{ result.current_price }}</div>
+                        <div class="subtitle">最新价</div>
+                    </div>
+                    <div class="summary-chip">
+                        <div class="suggestion">{{ result.suggestion }}</div>
+                        <div class="subtitle">操作建议</div>
+                    </div>
                 </div>
-                <div class="result-item">
-                    <p><b>支撑位：</b> <span style="color: #2e7d32; font-weight: bold;">{{ result.support_level }}</span>{% if result.support_pct is not none %}（相对最新价 <span style="color: #2e7d32;">{{ result.support_pct }}%</span>）{% endif %}</p>
+
+                <div class="grid-2" style="margin-top:14px;">
+                    <div class="chart-card">
+                        <div class="section-title">支撑/压力位解读</div>
+                        <div class="kv">
+                            <div class="item">支撑位：<span class="badge badge-green">{{ result.support_level }}</span> {% if result.support_pct is not none %}<span class="subtitle">({{ result.support_pct }}%)</span>{% endif %}</div>
+                            <div class="item">压力位：<span class="badge badge-red">{{ result.resistance_level }}</span> {% if result.resistance_pct is not none %}<span class="subtitle">({{ result.resistance_pct }}%)</span>{% endif %}</div>
+                        </div>
+                        <canvas id="sparkline" width="320" height="120" style="margin-top:10px;"></canvas>
+                        {% if result.signals %}
+                        <div style="margin-top:8px;">
+                            {% for s in result.signals %}
+                                <span class="badge badge-blue">{{ s }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="section-title">基本面雷达（代理）</div>
+                        {% if result.radar %}
+                        <canvas id="radarCanvas" width="320" height="260"></canvas>
+                        <div class="subtitle">{{ result.radar_comment }}</div>
+                        {% else %}
+                        <div class="subtitle">数据不足，暂不展示</div>
+                        {% endif %}
+                    </div>
                 </div>
+
+                {% if result.signal_stats %}
                 <div class="result-item">
-                    <p><b>压力位：</b> <span style="color: #c62828; font-weight: bold;">{{ result.resistance_level }}</span>{% if result.resistance_pct is not none %}（相对最新价 <span style="color: #c62828;">{{ result.resistance_pct }}%</span>）{% endif %}</p>
+                    <p><b>技术信号胜率</b></p>
+                    <ul>
+                        {% for sig, rec in result.signal_stats.items() %}
+                            <li><b>{{ sig }}:</b>
+                                {% if rec['2'] %} 2日 胜率{{ rec['2'].winrate }}% 平均{{ rec['2'].avg }}% {% endif %}
+                                {% if rec['5'] %} | 5日 胜率{{ rec['5'].winrate }}% 平均{{ rec['5'].avg }}% {% endif %}
+                                {% if rec['10'] %} | 10日 胜率{{ rec['10'].winrate }}% 平均{{ rec['10'].avg }}% {% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
                 </div>
+                {% endif %}
+
+                {% if result.pattern_tags %}
                 <div class="result-item">
-                    <p><b>投资建议：</b> <span style="color: #f57c00; font-weight: bold;">{{ result.suggestion }}</span></p>
+                    <p><b>形态标签：</b>
+                        {% for t in result.pattern_tags %}
+                            <span style="display:inline-block;background:#e3f2fd;color:#1976d2;padding:2px 8px;margin:2px;border-radius:10px;font-size:12px;">{{ t }}</span>
+                        {% endfor %}
+                    </p>
                 </div>
+                {% endif %}
             </div>
         {% endif %}
     </div>
 </body>
+<script>
+    (function(){
+        const radarData = {{ result.radar|tojson if result and result.radar else 'null' }};
+        if(!radarData) return;
+        const labels = Object.keys(radarData);
+        const values = labels.map(k=>radarData[k]);
+        const canvas = document.getElementById('radarCanvas');
+        if(!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const cx = canvas.width/2, cy = canvas.height/2 + 10; const R = 100;
+        // 绘制网格
+        ctx.strokeStyle = '#e0e0e0';
+        for(let g=1; g<=4; g++){
+            ctx.beginPath();
+            for(let i=0;i<labels.length;i++){
+                const ang = -Math.PI/2 + i*2*Math.PI/labels.length;
+                const r = R*g/4; const x = cx + r*Math.cos(ang); const y = cy + r*Math.sin(ang);
+                if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+            }
+            ctx.closePath(); ctx.stroke();
+        }
+        // 轴与文字
+        ctx.fillStyle = '#666'; ctx.font = '12px Arial';
+        labels.forEach((lab,i)=>{
+            const ang = -Math.PI/2 + i*2*Math.PI/labels.length;
+            const x = cx + (R+12)*Math.cos(ang); const y = cy + (R+12)*Math.sin(ang);
+            ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+R*Math.cos(ang), cy+R*Math.sin(ang)); ctx.strokeStyle='#ddd'; ctx.stroke();
+            ctx.fillText(lab, x-16, y+4);
+        });
+        // 区域
+        ctx.beginPath();
+        values.forEach((val,i)=>{
+            const ang = -Math.PI/2 + i*2*Math.PI/labels.length;
+            const r = R * Math.max(0, Math.min(100,val))/100;
+            const x = cx + r*Math.cos(ang); const y = cy + r*Math.sin(ang);
+            if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+        });
+        ctx.closePath(); ctx.fillStyle='rgba(102,126,234,0.25)'; ctx.fill(); ctx.strokeStyle='#667eea'; ctx.stroke();
+    })();
+
+    (function(){
+        const prices = {{ result.recent_prices|tojson if result and result.recent_prices else 'null' }};
+        if(!prices || prices.length < 2) return;
+        const c = document.getElementById('sparkline'); if(!c) return; const ctx = c.getContext('2d');
+        const pad = 8; const w=c.width, h=c.height; const min=Math.min.apply(null, prices), max=Math.max.apply(null, prices);
+        const scaleX = (i)=> pad + i*(w-2*pad)/(prices.length-1);
+        const scaleY = (v)=> h-pad - (v-min)*(h-2*pad)/(max-min+1e-9);
+        // 背景网格
+        ctx.strokeStyle='#f0f0f0';
+        for(let g=0; g<=4; g++){ const y = pad + g*(h-2*pad)/4; ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(w-pad,y); ctx.stroke(); }
+        // 折线
+        ctx.beginPath(); ctx.strokeStyle='#667eea'; ctx.lineWidth=2;
+        prices.forEach((v,i)=>{ const x=scaleX(i), y=scaleY(v); if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); }); ctx.stroke();
+        // 支撑/压力线
+        {% if result.support_level %}
+        const supY = scaleY({{ result.support_level }}); ctx.strokeStyle='#2e7d32'; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(pad,supY); ctx.lineTo(w-pad,supY); ctx.stroke(); ctx.setLineDash([]);
+        {% endif %}
+        {% if result.resistance_level %}
+        const resY = scaleY({{ result.resistance_level }}); ctx.strokeStyle='#c62828'; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(pad,resY); ctx.lineTo(w-pad,resY); ctx.stroke(); ctx.setLineDash([]);
+        {% endif %}
+    })();
+</script>
+</html>
 </html>
