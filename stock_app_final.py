@@ -147,18 +147,42 @@ def get_market_rankings(market):
                 print(f"A股排名数据获取失败: {e}")
                 return []
             
-            # 按涨跌幅排序，取前20
-            df = df.sort_values('涨跌幅', ascending=False).head(20)
+            # 为每只股票计算综合得分并排序
+            stock_scores = []
+            for _, row in df.iterrows():
+                try:
+                    # 获取历史数据进行评分
+                    hist_data = fetch_ashare_data(row['代码'])
+                    if not hist_data.empty:
+                        overall_score = calculate_overall_score_enhanced(hist_data, calculate_enhanced_technical_score(hist_data))
+                    else:
+                        # 如果无法获取历史数据，使用基础评分
+                        overall_score = 50
+                except Exception as e:
+                    print(f"评分计算失败 {row['代码']}: {e}")
+                    overall_score = 50
+                
+                stock_scores.append({
+                    'row': row,
+                    'score': overall_score
+                })
+            
+            # 按综合得分排序，取前20
+            stock_scores.sort(key=lambda x: x['score'], reverse=True)
+            top_stocks = stock_scores[:20]
             
             rankings = []
-            for _, row in df.iterrows():
+            for stock_data in top_stocks:
+                row = stock_data['row']
+                score = stock_data['score']
                 rankings.append({
                     "symbol": row['代码'],
                     "name": row['名称'],
                     "price": row['最新价'],
                     "change": row['涨跌幅'],
                     "volume": row['成交量'],
-                    "currency": "¥"
+                    "currency": "¥",
+                    "score": score
                 })
             return rankings
             
@@ -172,18 +196,42 @@ def get_market_rankings(market):
                 print(f"港股排名数据获取失败: {e}")
                 return []
             
-            # 按涨跌幅排序，取前20
-            df = df.sort_values('涨跌幅', ascending=False).head(20)
+            # 为每只港股计算综合得分并排序
+            stock_scores = []
+            for _, row in df.iterrows():
+                try:
+                    # 获取历史数据进行评分
+                    hist_data = fetch_hkshare_data(row['代码'])
+                    if not hist_data.empty:
+                        overall_score = calculate_overall_score_enhanced(hist_data, calculate_enhanced_technical_score(hist_data))
+                    else:
+                        # 如果无法获取历史数据，使用基础评分
+                        overall_score = 50
+                except Exception as e:
+                    print(f"港股评分计算失败 {row['代码']}: {e}")
+                    overall_score = 50
+                
+                stock_scores.append({
+                    'row': row,
+                    'score': overall_score
+                })
+            
+            # 按综合得分排序，取前20
+            stock_scores.sort(key=lambda x: x['score'], reverse=True)
+            top_stocks = stock_scores[:20]
             
             rankings = []
-            for _, row in df.iterrows():
+            for stock_data in top_stocks:
+                row = stock_data['row']
+                score = stock_data['score']
                 rankings.append({
                     "symbol": row['代码'],
                     "name": row['名称'],
                     "price": row['最新价'],
                     "change": row['涨跌幅'],
                     "volume": row['成交量'],
-                    "currency": "HK$"
+                    "currency": "HK$",
+                    "score": score
                 })
             return rankings
             
