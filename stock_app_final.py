@@ -153,27 +153,49 @@ def get_market_rankings(market):
     """获取市场排名 - 简化版本，优先使用yfinance"""
     try:
         if market == "CN":
-            # A股排名 - 优先使用yfinance兜底
+            # A股排名 - 优先使用akshare
             try:
-                df = build_cn_spot_from_yf()
+                print("🔄 从akshare获取A股排名数据...")
+                df = ak.stock_zh_a_spot_em()
                 if df.empty:
-                    print("yfinance数据为空，使用静态排名")
+                    print("akshare数据为空，使用静态排名")
                     return get_static_cn_rankings()
+                print(f"✅ akshare获取到{len(df)}只A股数据")
             except Exception as e:
-                print(f"A股排名数据获取失败: {e}")
+                print(f"akshare A股排名数据获取失败: {e}")
                 return get_static_cn_rankings()
             
             # 为每只股票计算综合得分并排序
             stock_scores = []
             for _, row in df.iterrows():
                 try:
-                    # 获取历史数据进行评分
-                    hist_data = fetch_ashare_data(row['代码'])
-                    if not hist_data.empty:
-                        overall_score = calculate_overall_score_enhanced(hist_data, calculate_enhanced_technical_score(hist_data))
+                    # 基于涨跌幅和成交量进行简单评分
+                    change_pct = row.get('涨跌幅', 0)
+                    volume = row.get('成交量', 0)
+                    
+                    # 处理NaN值
+                    if pd.isna(change_pct):
+                        change_pct = 0
+                    if pd.isna(volume):
+                        volume = 0
+                    
+                    change_pct = float(change_pct)
+                    volume = float(volume)
+                    
+                    # 简单评分逻辑：涨跌幅越高得分越高，成交量越大得分越高
+                    score = 50  # 基础分
+                    if change_pct > 0:
+                        score += min(change_pct * 2, 30)  # 涨幅加分，最多30分
                     else:
-                        # 如果无法获取历史数据，使用基础评分
-                        overall_score = 50
+                        score += max(change_pct * 2, -20)  # 跌幅扣分，最多扣20分
+                    
+                    # 成交量加分（相对）
+                    if volume > 0:
+                        score += min(volume / 1000000, 20)  # 成交量加分，最多20分
+                    
+                    # 确保得分在0-100之间
+                    overall_score = max(0, min(100, score))
+                    
                 except Exception as e:
                     print(f"评分计算失败 {row['代码']}: {e}")
                     overall_score = 50
@@ -203,13 +225,16 @@ def get_market_rankings(market):
             return rankings
             
         elif market == "HK":
-            # 港股排名 - 优先使用yfinance兜底
+            # 港股排名 - 优先使用akshare
             try:
-                df = build_hk_spot_from_yf()
+                print("🔄 从akshare获取港股排名数据...")
+                df = ak.stock_hk_spot_em()
                 if df.empty:
+                    print("akshare港股数据为空")
                     return []
+                print(f"✅ akshare获取到{len(df)}只港股数据")
             except Exception as e:
-                print(f"港股排名数据获取失败: {e}")
+                print(f"akshare港股排名数据获取失败: {e}")
                 return []
             
             # 为每只港股计算综合得分并排序
