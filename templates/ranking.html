@@ -39,8 +39,8 @@
                 <th>代码</th>
                 <th>名称</th>
                 <th>最新价</th>
-                <th>压力位</th>
-                <th>压力位相对最新价%</th>
+                <th>综合得分</th>
+                <th>涨跌幅</th>
                 <th>数据源</th>
             </tr>
         </thead>
@@ -51,8 +51,8 @@
                 <td>{{ r.symbol }}</td>
                 <td>{% if r.name %}{{ r.name }}{% else %}-{% endif %}</td>
                 <td>{{ r.last_price }}</td>
-                <td>{{ r.resistance }}</td>
-                <td>{{ r.resistance_pct }}%</td>
+                <td style="color: {% if r.score >= 80 %}#2e7d32{% elif r.score >= 60 %}#1976d2{% elif r.score >= 40 %}#f57c00{% else %}#c62828{% endif %}; font-weight: bold;">{{ r.score }}</td>
+                <td>{{ r.change }}%</td>
                 <td>{{ r.source }}</td>
             </tr>
             {% endfor %}

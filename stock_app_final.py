@@ -1841,7 +1841,8 @@ def ranking_page():
                     "last_price": item["price"],
                     "resistance": round(item["price"] * 1.1, 2),
                     "resistance_pct": 10.0,
-                    "source": "历史数据构建"
+                    "source": "综合得分排序",
+                    "score": item.get("score", 0)
                 })
         elif market == "HK":
             rankings = get_market_rankings("HK")
@@ -1853,7 +1854,8 @@ def ranking_page():
                     "last_price": item["price"],
                     "resistance": round(item["price"] * 1.1, 2),
                     "resistance_pct": 10.0,
-                    "source": "历史数据构建"
+                    "source": "综合得分排序",
+                    "score": item.get("score", 0)
                 })
         elif market == "US":
             rankings = get_market_rankings("US")
