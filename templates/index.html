@@ -147,17 +147,21 @@
             background: #fff;
             border: 1px solid #eee;
             margin-bottom: 15px;
+            overflow: hidden;
         }
         
         .summary-header {
             text-align: center;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
         
         .summary-chips {
             display: flex;
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 10px;
             justify-content: center;
+            align-items: stretch;
         }
         
         .summary-chip {
@@ -166,10 +170,14 @@
             align-items: center;
             justify-content: center;
             min-width: 80px;
+            max-width: 120px;
             padding: 10px;
             background: #f8f9fa;
             border-radius: 8px;
             border: 1px solid #eee;
+            flex: 1;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
         
         .score {
@@ -216,6 +224,8 @@
             border-radius: 6px;
             padding: 10px;
             text-align: center;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
         
         .section-title {
@@ -253,6 +263,48 @@
             padding: 15px;
             border-radius: 8px;
             margin: 15px 0;
+        }
+        
+        /* 移动端优化 */
+        @media (max-width: 767px) {
+            .container {
+                padding: 10px;
+                margin: 5px;
+            }
+            
+            .summary-bar {
+                padding: 10px;
+                gap: 10px;
+            }
+            
+            .summary-chips {
+                gap: 8px;
+            }
+            
+            .summary-chip {
+                min-width: 70px;
+                max-width: 100px;
+                padding: 8px;
+            }
+            
+            .score {
+                font-size: 20px;
+            }
+            
+            .suggestion {
+                font-size: 0.8rem;
+                line-height: 1.2;
+            }
+            
+            .kv .item {
+                padding: 8px;
+                font-size: 0.9rem;
+            }
+            
+            .badge {
+                font-size: 0.7rem;
+                padding: 2px 6px;
+            }
         }
         
         /* 平板和桌面端样式 */

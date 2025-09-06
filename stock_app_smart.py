@@ -130,9 +130,26 @@ def get_smart_cn_data():
         {"代码": "002304", "名称": "洋河股份", "基础价": 120.50, "行业": "白酒"}
     ]
     
-    # 基于真实股票生成更多数据
+    # 基于真实股票生成更多数据，确保基础股票代码始终包含
     extended_stocks = []
-    for i in range(200):  # 生成200只股票数据
+    
+    # 首先添加所有基础股票代码（确保它们始终存在）
+    for base_stock in real_stocks:
+        price_variation = 0.9 + 0.2 * np.random.random()  # 价格变化90%-110%
+        change_variation = np.random.uniform(-3, 3)  # 涨跌幅变化-3%到+3%
+        volume_variation = 0.8 + 0.4 * np.random.random()  # 成交量变化80%-120%
+        
+        stock = {
+            "代码": base_stock["代码"],
+            "名称": base_stock["名称"],
+            "最新价": round(base_stock["基础价"] * price_variation, 2),
+            "涨跌幅": round(change_variation, 2),
+            "成交量": int(1000000 * volume_variation)
+        }
+        extended_stocks.append(stock)
+    
+    # 然后添加更多变体股票
+    for i in range(180):  # 生成180只额外股票
         base_stock = real_stocks[i % len(real_stocks)]
         
         # 基于真实数据生成变化

@@ -191,6 +191,9 @@
             margin: 10px 0;
             padding: 15px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            overflow: hidden;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
         
         .mobile-card .card-header {
@@ -221,21 +224,28 @@
             grid-template-columns: 1fr 1fr;
             gap: 10px;
             margin-bottom: 10px;
+            overflow: hidden;
         }
         
         .mobile-card .card-item {
             text-align: center;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
         
         .mobile-card .card-label {
             font-size: 0.8rem;
             color: #666;
             margin-bottom: 4px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
         
         .mobile-card .card-value {
             font-weight: bold;
             color: #333;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
         
         .mobile-card .card-footer {
@@ -254,10 +264,29 @@
             
             .mobile-card {
                 display: block;
+                padding: 12px;
+            }
+            
+            .mobile-card .card-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            
+            .mobile-card .card-content {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            
+            .mobile-card .card-item {
+                padding: 5px;
+                border: 1px solid #eee;
+                border-radius: 4px;
             }
             
             .container {
                 padding: 10px;
+                margin: 5px;
             }
             
             h2 {
