@@ -1,47 +1,37 @@
 #!/bin/bash
 
 # 股票分析系统启动脚本
-# 双击此文件即可启动应用程序
+# 支持环境变量配置API密钥
 
-echo "🚀 启动股票分析系统..."
-
-# 切换到脚本所在目录
+# 设置工作目录
 cd "$(dirname "$0")"
 
 # 检查Python是否安装
 if ! command -v python3 &> /dev/null; then
     echo "❌ Python3 未安装，请先安装Python3"
-    echo ""
-    read -p "按任意键退出..."
     exit 1
 fi
 
-echo "✅ Python3 已安装: $(python3 --version)"
+# 检查依赖包是否安装
+echo "🔍 检查依赖包..."
+pip3 list | grep -q flask || pip3 install Flask
+pip3 list | grep -q pandas || pip3 install pandas  
+pip3 list | grep -q akshare || pip3 install akshare
+pip3 list | grep -q yfinance || pip3 install yfinance
+pip3 list | grep -q numpy || pip3 install numpy
+pip3 list | grep -q requests || pip3 install requests
+pip3 list | grep -q tushare || pip3 install tushare
 
-# 检查依赖包
-echo "✅ 检查依赖包..."
-python3 -c "
-try:
-    import flask, pandas, akshare, numpy, requests
-    print('✅ 所有依赖包已安装')
-except ImportError as e:
-    print(f'❌ 缺少依赖包: {e}')
-    print('请运行: pip3 install Flask pandas akshare numpy requests')
-    exit(1)
-"
-
-if [ $? -ne 0 ]; then
-    echo ""
-    read -p "按任意键退出..."
-    exit 1
+# 获取本地IP地址（用于局域网访问）
+LOCAL_IP=$(ip route get 8.8.8.8 | awk '{print $7}' | head -n1)
+if [ -z "$LOCAL_IP" ]; then
+    LOCAL_IP="127.0.0.1"
 fi
 
-echo "✅ 启动Flask应用..."
-echo "🌐 应用将在 http://127.0.0.1:8082 启动"
-echo "📱 在浏览器中打开上述地址即可使用"
-echo ""
-echo "按 Ctrl+C 停止应用"
-echo ""
+echo "🚀 启动股票分析系统..."
+echo "🏠 本地访问: http://127.0.0.1:8082"
+echo "📱 局域网访问: http://$LOCAL_IP:8082"
+echo "💡 确保iPad和电脑在同一WiFi网络下"
 
-# 固定使用 8082 端口运行，避免 8083 端口占用导致无法启动
-PORT=8082 python3 stock_app_final.py
+# 启动应用（固定端口8082，便于iPad访问）
+python3 stock_app_optimized.py
