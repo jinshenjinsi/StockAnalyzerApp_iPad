@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>预警系统 - 无敌股票分析系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .alert-card {
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease;
+        }
+        .alert-card:hover {
+            transform: translateY(-2px);
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-active { background-color: #28a745; }
+        .status-inactive { background-color: #dc3545; }
+        .price-input {
+            max-width: 150px;
+        }
+        .notification-method {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">无敌股票分析系统</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="/">股票分析</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/ranking">股票排名</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/screener">智能选股</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/alerts">预警系统</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/favorites">收藏夹</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <h2 class="mb-4">📈 预警系统</h2>
+                
+                <!-- 创建新预警 -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">创建新预警</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="createAlertForm">
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <label for="alertSymbol" class="form-label">股票代码</label>
+                                    <input type="text" class="form-control" id="alertSymbol" placeholder="AAPL" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="alertType" class="form-label">预警类型</label>
+                                    <select class="form-select" id="alertType" required>
+                                        <option value="price_above">价格突破上限</option>
+                                        <option value="price_below">价格跌破下限</option>
+                                        <option value="rsi_overbought">RSI超买</option>
+                                        <option value="rsi_oversold">RSI超卖</option>
+                                        <option value="macd_bullish">MACD金叉</option>
+                                        <option value="macd_bearish">MACD死叉</option>
+                                        <option value="bollinger_upper">触及布林带上轨</option>
+                                        <option value="bollinger_lower">触及布林带下轨</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3" id="priceThresholdGroup">
+                                    <label for="priceThreshold" class="form-label">价格阈值</label>
+                                    <input type="number" class="form-control price-input" id="priceThreshold" step="0.01" placeholder="150.00">
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="notificationMethod" class="form-label">通知方式</label>
+                                    <select class="form-select" id="notificationMethod" required>
+                                        <option value="email">邮箱</option>
+                                        <option value="sms">短信</option>
+                                        <option value="push">推送通知</option>
+                                        <option value="web">网页提醒</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-12">
+                                    <button type="submit" class="btn btn-primary">创建预警</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- 现有预警列表 -->
+                <div class="card">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">我的预警</h5>
+                        <span id="alertCount" class="badge bg-secondary">0 个预警</span>
+                    </div>
+                    <div class="card-body">
+                        <div id="alertsList" class="row g-3">
+                            <!-- 预警项将通过JavaScript动态加载 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 预警详情模态框 -->
+    <div class="modal fade" id="alertDetailModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">预警详情</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="alertDetailContent">
+                    <!-- 动态内容 -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                    <button type="button" class="btn btn-danger" id="deleteAlertBtn">删除预警</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 预警类型与价格阈值显示逻辑
+        document.getElementById('alertType').addEventListener('change', function() {
+            const priceGroup = document.getElementById('priceThresholdGroup');
+            const priceInput = document.getElementById('priceThreshold');
+            
+            const priceBasedTypes = ['price_above', 'price_below'];
+            if (priceBasedTypes.includes(this.value)) {
+                priceGroup.style.display = 'block';
+                priceInput.required = true;
+            } else {
+                priceGroup.style.display = 'none';
+                priceInput.required = false;
+                priceInput.value = '';
+            }
+        });
+
+        // 加载现有预警
+        async function loadAlerts() {
+            try {
+                const response = await fetch('/api/get_alerts');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const alertsList = document.getElementById('alertsList');
+                    const alertCount = document.getElementById('alertCount');
+                    
+                    alertsList.innerHTML = '';
+                    alertCount.textContent = `${data.alerts.length} 个预警`;
+                    
+                    data.alerts.forEach(alert => {
+                        const alertCard = document.createElement('div');
+                        alertCard.className = 'col-md-6 col-lg-4';
+                        alertCard.innerHTML = `
+                            <div class="alert-card p-3 border">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <h6 class="mb-1">${alert.symbol}</h6>
+                                        <small class="text-muted">${getAlertTypeName(alert.type)}</small>
+                                    </div>
+                                    <div>
+                                        <span class="status-indicator ${alert.active ? 'status-active' : 'status-inactive'}"></span>
+                                    </div>
+                                </div>
+                                ${alert.threshold ? `<p class="mb-2 small">阈值: ${alert.threshold}</p>` : ''}
+                                <p class="mb-2 small">通知: ${getNotificationMethodName(alert.notification_method)}</p>
+                                <p class="mb-2 small">创建时间: ${new Date(alert.created_at).toLocaleString()}</p>
+                                <button class="btn btn-sm btn-outline-primary view-alert-btn" data-id="${alert.id}">
+                                    查看详情
+                                </button>
+                            </div>
+                        `;
+                        alertsList.appendChild(alertCard);
+                    });
+                    
+                    // 添加查看详情事件监听
+                    document.querySelectorAll('.view-alert-btn').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            const alertId = this.getAttribute('data-id');
+                            showAlertDetail(alertId);
+                        });
+                    });
+                }
+            } catch (error) {
+                console.error('加载预警失败:', error);
+            }
+        }
+
+        function getAlertTypeName(type) {
+            const types = {
+                'price_above': '价格突破上限',
+                'price_below': '价格跌破下限',
+                'rsi_overbought': 'RSI超买',
+                'rsi_oversold': 'RSI超卖',
+                'macd_bullish': 'MACD金叉',
+                'macd_bearish': 'MACD死叉',
+                'bollinger_upper': '触及布林带上轨',
+                'bollinger_lower': '触及布林带下轨'
+            };
+            return types[type] || type;
+        }
+
+        function getNotificationMethodName(method) {
+            const methods = {
+                'email': '邮箱',
+                'sms': '短信',
+                'push': '推送通知',
+                'web': '网页提醒'
+            };
+            return methods[method] || method;
+        }
+
+        // 显示预警详情
+        async function showAlertDetail(alertId) {
+            try {
+                const response = await fetch(`/api/get_alert/${alertId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const alert = data.alert;
+                    document.getElementById('alertDetailContent').innerHTML = `
+                        <div class="mb-3">
+                            <strong>股票代码:</strong> ${alert.symbol}
+                        </div>
+                        <div class="mb-3">
+                            <strong>预警类型:</strong> ${getAlertTypeName(alert.type)}
+                        </div>
+                        ${alert.threshold ? `<div class="mb-3"><strong>价格阈值:</strong> ${alert.threshold}</div>` : ''}
+                        <div class="mb-3">
+                            <strong>通知方式:</strong> ${getNotificationMethodName(alert.notification_method)}
+                        </div>
+                        <div class="mb-3">
+                            <strong>状态:</strong> 
+                            <span class="badge ${alert.active ? 'bg-success' : 'bg-danger'}">
+                                ${alert.active ? '激活' : '停用'}
+                            </span>
+                        </div>
+                        <div class="mb-3">
+                            <strong>创建时间:</strong> ${new Date(alert.created_at).toLocaleString()}
+                        </div>
+                        ${alert.last_triggered ? `<div class="mb-3"><strong>最后触发:</strong> ${new Date(alert.last_triggered).toLocaleString()}</div>` : ''}
+                    `;
+                    
+                    // 设置删除按钮的ID
+                    document.getElementById('deleteAlertBtn').setAttribute('data-id', alertId);
+                    
+                    // 显示模态框
+                    const modal = new bootstrap.Modal(document.getElementById('alertDetailModal'));
+                    modal.show();
+                }
+            } catch (error) {
+                console.error('获取预警详情失败:', error);
+            }
+        }
+
+        // 删除预警
+        document.getElementById('deleteAlertBtn').addEventListener('click', async function() {
+            const alertId = this.getAttribute('data-id');
+            if (!alertId) return;
+            
+            if (!confirm('确定要删除这个预警吗？')) return;
+            
+            try {
+                const response = await fetch(`/api/delete_alert/${alertId}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('alertDetailModal')).hide();
+                    loadAlerts(); // 重新加载预警列表
+                } else {
+                    alert('删除失败: ' + data.error);
+                }
+            } catch (error) {
+                console.error('删除预警失败:', error);
+                alert('删除失败，请重试');
+            }
+        });
+
+        // 创建新预警
+        document.getElementById('createAlertForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const alertData = {
+                symbol: formData.get('alertSymbol').trim().toUpperCase(),
+                type: formData.get('alertType'),
+                threshold: formData.get('priceThreshold') || null,
+                notification_method: formData.get('notificationMethod')
+            };
+            
+            // 验证股票代码
+            if (!alertData.symbol) {
+                alert('请输入股票代码');
+                return;
+            }
+            
+            // 验证价格阈值（如果是价格类预警）
+            if (['price_above', 'price_below'].includes(alertData.type) && !alertData.threshold) {
+                alert('请输入价格阈值');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/create_alert', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(alertData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('预警创建成功！');
+                    this.reset();
+                    loadAlerts(); // 重新加载预警列表
+                } else {
+                    alert('创建失败: ' + data.error);
+                }
+            } catch (error) {
+                console.error('创建预警失败:', error);
+                alert('创建失败，请重试');
+            }
+        });
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAlerts();
+            
+            // 初始化价格阈值组的显示状态
+            const alertType = document.getElementById('alertType');
+            const priceGroup = document.getElementById('priceThresholdGroup');
+            if (!['price_above', 'price_below'].includes(alertType.value)) {
+                priceGroup.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

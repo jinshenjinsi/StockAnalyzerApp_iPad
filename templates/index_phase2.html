@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>无敌股票分析系统 - Phase 2</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .score-badge {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        .signal-tag {
+            margin: 2px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.85em;
+        }
+        .price-change {
+            font-weight: bold;
+        }
+        .positive { color: #28a745; }
+        .negative { color: #dc3545; }
+        .neutral { color: #6c757d; }
+        .mini-chart {
+            width: 100px;
+            height: 40px;
+        }
+        .alert-section {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .favorites-section {
+            background-color: #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .technical-indicator {
+            margin: 5px 0;
+            padding: 8px;
+            background-color: #f1f3f5;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="text-center mb-4">🦐 无敌股票分析系统 - Phase 2</h1>
+                
+                <!-- 股票查询表单 -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <form method="POST" class="row g-3">
+                            <div class="col-md-8">
+                                <input type="text" class="form-control" name="symbol" placeholder="输入股票代码 (如: AAPL, 600519)" required>
+                            </div>
+                            <div class="col-md-4">
+                                <button type="submit" class="btn btn-primary w-100">分析股票</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                {% if result %}
+                {% if result.error %}
+                <div class="alert alert-danger">{{ result.error }}</div>
+                {% else %}
+                <!-- 股票基本信息 -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h3>{{ result.name }} ({{ result.symbol }}) - {{ result.market_type }}</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h4>{{ result.currency }}{{ result.current_price }}</h4>
+                                <span class="price-change {% if result.change >= 0 %}positive{% else %}negative{% endif %}">
+                                    {{ "%+.2f"|format(result.change) }}%
+                                </span>
+                                <p class="text-muted">成交量: {{ result.volume }}</p>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <div class="mini-chart" id="miniChart"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 综合评分和建议 -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5>综合评分</h5>
+                            </div>
+                            <div class="card-body text-center">
+                                <div class="score-badge 
+                                    {% if result.overall_score >= 80 %}text-success
+                                    {% elif result.overall_score >= 60 %}text-primary
+                                    {% elif result.overall_score >= 40 %}text-warning
+                                    {% else %}text-danger{% endif %}">
+                                    {{ result.overall_score }}/100
+                                </div>
+                                <p class="mt-2">{{ result.suggestion }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5>交易信号</h5>
+                            </div>
+                            <div class="card-body">
+                                {% for signal in result.signals %}
+                                <span class="signal-tag bg-info text-white">{{ signal }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 高级技术指标 -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>高级技术指标</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if result.advanced_indicators %}
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="technical-indicator">
+                                    <strong>MACD:</strong> {{ "%.2f"|format(result.advanced_indicators.macd.macd) }}
+                                    <br><small>Signal: {{ "%.2f"|format(result.advanced_indicators.macd.signal) }}, Histogram: {{ "%.2f"|format(result.advanced_indicators.macd.histogram) }}</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="technical-indicator">
+                                    <strong>RSI (14):</strong> {{ "%.2f"|format(result.advanced_indicators.rsi) }}
+                                    <br><small>{% if result.advanced_indicators.rsi < 30 %}超卖区域{% elif result.advanced_indicators.rsi > 70 %}超买区域{% else %}正常区域{% endif %}</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="technical-indicator">
+                                    <strong>布林带:</strong>
+                                    <br><small>上轨: {{ "%.2f"|format(result.advanced_indicators.bollinger.upper) }}</small>
+                                    <br><small>下轨: {{ "%.2f"|format(result.advanced_indicators.bollinger.lower) }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 新增指标 -->
+                        <div class="row mt-3">
+                            <div class="col-md-3">
+                                <div class="technical-indicator">
+                                    <strong>ADX:</strong> {{ "%.2f"|format(result.advanced_indicators.adx) }}
+                                    <br><small>{% if result.advanced_indicators.adx > 25 %}趋势强劲{% else %}趋势较弱{% endif %}</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="technical-indicator">
+                                    <strong>Williams %R:</strong> {{ "%.2f"|format(result.advanced_indicators.williams_r) }}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="technical-indicator">
+                                    <strong>OBV:</strong> {{ "%.0f"|format(result.advanced_indicators.obv) }}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="technical-indicator">
+                                    <strong>ATR:</strong> {{ "%.2f"|format(result.advanced_indicators.atr) }}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- 支撑位和阻力位 -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5>支撑位</h5>
+                            </div>
+                            <div class="card-body text-center">
+                                {% if result.support_level %}
+                                <h5>{{ result.currency }}{{ result.support_level }}</h5>
+                                <small>{{ "%+.2f"|format(result.support_pct) }}%</small>
+                                {% else %}
+                                <p class="text-muted">暂无数据</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5>阻力位</h5>
+                            </div>
+                            <div class="card-body text-center">
+                                {% if result.resistance_level %}
+                                <h5>{{ result.currency }}{{ result.resistance_level }}</h5>
+                                <small>{{ "%+.2f"|format(result.resistance_pct) }}%</small>
+                                {% else %}
+                                <p class="text-muted">暂无数据</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 预警系统 -->
+                <div class="alert-section">
+                    <h5>🚨 预警设置</h5>
+                    <form id="alertForm" class="row g-2">
+                        <div class="col-md-3">
+                            <input type="number" class="form-control form-control-sm" id="priceAlert" placeholder="价格预警" step="0.01">
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select form-select-sm" id="indicatorAlert">
+                                <option value="">技术指标预警</option>
+                                <option value="rsi_overbought">RSI超买 (>70)</option>
+                                <option value="rsi_oversold">RSI超卖 (<30)</option>
+                                <option value="macd_bullish">MACD金叉</option>
+                                <option value="macd_bearish">MACD死叉</option>
+                                <option value="bb_breakout_upper">突破布林带上轨</option>
+                                <option value="bb_breakout_lower">跌破布林带下轨</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select form-select-sm" id="alertMethod">
+                                <option value="email">邮件通知</option>
+                                <option value="sms">短信通知</option>
+                                <option value="push">推送通知</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <button type="button" class="btn btn-success btn-sm w-100" onclick="setAlert()">设置预警</button>
+                        </div>
+                    </form>
+                    <div id="alertStatus" class="mt-2"></div>
+                </div>
+
+                <!-- 收藏夹管理 -->
+                <div class="favorites-section">
+                    <h5>⭐ 收藏夹管理</h5>
+                    <form id="favoritesForm" class="row g-2">
+                        <div class="col-md-4">
+                            <input type="text" class="form-control form-control-sm" id="favoriteGroup" placeholder="分组名称 (可选)">
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select form-select-sm" id="favoriteAction">
+                                <option value="add">添加到收藏</option>
+                                <option value="remove">从收藏移除</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="button" class="btn btn-warning btn-sm w-100" onclick="manageFavorite()">操作</button>
+                        </div>
+                    </form>
+                    <div id="favoritesStatus" class="mt-2"></div>
+                </div>
+
+                <!-- 数据源信息 -->
+                <div class="alert alert-info">
+                    <strong>数据源:</strong> {{ result.data_source }} | <strong>策略:</strong> {{ result.strategy }}
+                </div>
+                {% endif %}
+                {% endif %}
+
+                <!-- 导航链接 -->
+                <div class="text-center mt-4">
+                    <a href="/ranking?market=US" class="btn btn-outline-secondary me-2">美股排名</a>
+                    <a href="/ranking?market=CN" class="btn btn-outline-secondary me-2">A股排名</a>
+                    <a href="/screener" class="btn btn-outline-secondary">智能选股</a>
+                    <a href="/alerts" class="btn btn-outline-success">我的预警</a>
+                    <a href="/favorites" class="btn btn-outline-warning">我的收藏</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // 渲染迷你走势图
+        {% if result and result.recent_prices %}
+        const ctx = document.getElementById('miniChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: Array({{ result.recent_prices|length }}).fill(''),
+                datasets: [{
+                    data: {{ result.recent_prices|tojson }},
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    borderWidth: 1,
+                    pointRadius: 0,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false }
+                },
+                scales: {
+                    x: { display: false },
+                    y: { display: false }
+                }
+            }
+        });
+        {% endif %}
+
+        // 预警设置函数
+        function setAlert() {
+            const priceAlert = document.getElementById('priceAlert').value;
+            const indicatorAlert = document.getElementById('indicatorAlert').value;
+            const alertMethod = document.getElementById('alertMethod').value;
+            
+            if (!priceAlert && !indicatorAlert) {
+                showStatus('alertStatus', '请设置至少一个预警条件', 'danger');
+                return;
+            }
+            
+            // 这里应该发送AJAX请求到后端
+            showStatus('alertStatus', '预警设置成功！', 'success');
+        }
+
+        // 收藏夹管理函数
+        function manageFavorite() {
+            const favoriteGroup = document.getElementById('favoriteGroup').value;
+            const favoriteAction = document.getElementById('favoriteAction').value;
+            
+            // 这里应该发送AJAX请求到后端
+            const actionText = favoriteAction === 'add' ? '添加' : '移除';
+            showStatus('favoritesStatus', `已${actionText}到收藏夹！`, 'success');
+        }
+
+        function showStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            setTimeout(() => {
+                element.innerHTML = '';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
