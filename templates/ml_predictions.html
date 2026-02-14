@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>机器学习预测 - 股票分析系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 机器学习预测</h1>
+            <nav>
+                <a href="/">首页</a>
+                <a href="/technical">技术指标</a>
+                <a href="/alerts">提醒</a>
+                <a href="/favorites">收藏</a>
+                <a href="/ml-predictions" class="active">ML预测</a>
+                <a href="/backtesting">回测</a>
+            </nav>
+        </header>
+        
+        <main>
+            <div class="search-section">
+                <input type="text" id="symbol-input" placeholder="输入股票代码 (如: AAPL, TSLA)" />
+                <button onclick="getMlPrediction()">获取预测</button>
+            </div>
+            
+            <div id="prediction-results" class="results-section hidden">
+                <h2>预测结果</h2>
+                <div class="prediction-card">
+                    <div class="symbol-info">
+                        <h3 id="prediction-symbol">AAPL</h3>
+                        <p id="prediction-date">2026-02-14</p>
+                    </div>
+                    
+                    <div class="prediction-metrics">
+                        <div class="metric">
+                            <label>价格预测</label>
+                            <span id="predicted-price" class="value">150.25</span>
+                        </div>
+                        <div class="metric">
+                            <label>置信度</label>
+                            <span id="confidence-score" class="value">85%</span>
+                        </div>
+                        <div class="metric">
+                            <label>预测方向</label>
+                            <span id="prediction-direction" class="value buy">上涨</span>
+                        </div>
+                    </div>
+                    
+                    <div class="prediction-chart">
+                        <canvas id="prediction-chart"></canvas>
+                    </div>
+                    
+                    <div class="sentiment-analysis">
+                        <h3>市场情绪分析</h3>
+                        <div class="sentiment-metrics">
+                            <div class="sentiment-item">
+                                <label>新闻情绪</label>
+                                <span id="news-sentiment" class="sentiment-score positive">+2.3</span>
+                            </div>
+                            <div class="sentiment-item">
+                                <label>社交媒体</label>
+                                <span id="social-sentiment" class="sentiment-score neutral">+0.8</span>
+                            </div>
+                            <div class="sentiment-item">
+                                <label>综合情绪</label>
+                                <span id="combined-sentiment" class="sentiment-score positive">+1.9</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="loading" class="loading hidden">
+                <div class="spinner"></div>
+                <p>正在分析数据和生成预测...</p>
+            </div>
+            
+            <div id="error-message" class="error hidden"></div>
+        </main>
+        
+        <footer>
+            <p>无敌的股票分析系统 v3.0 | 机器学习驱动的智能投资助手</p>
+        </footer>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/ml_predictions.js') }}"></script>
+</body>
+</html>
